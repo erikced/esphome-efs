@@ -84,12 +84,12 @@ void Efs::reset_telegram_() {
 void Efs::receive_telegram_() {
     while (this->available_within_timeout_()) {
         const char c = this->read();
-        ++this->read_counter_()
+        ++this->read_counter_;
         if (c == '~') {
             ESP_LOGV(TAG, "Header of telegram found");
             this->reset_telegram_();
             this->header_found_ = true;
-            ++this->telegram_counter;
+            ++this->telegram_counter_;
         }
 
         if (!this->header_found_)
