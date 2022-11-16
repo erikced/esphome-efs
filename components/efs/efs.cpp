@@ -127,6 +127,8 @@ void Efs::dump_config() {
     ESP_LOGCONFIG(TAG, "  Receive timeout: %.1fs", this->receive_timeout_ / 1e3f);
     ESP_LOGV(TAG, "  Telegrams read: %u", this->telegram_counter_);
     ESP_LOGV(TAG, "  Bytes read: %u", this->bytes_read_);
+    ESP_LOGV(TAG, "  Last read time: %u", this->last_read_time_);
+    ESP_LOGV(TAG, "  Requesting data: %s", this->requesting_data_ ? "true" : "false");
 }
 
 }  // namespace efs
