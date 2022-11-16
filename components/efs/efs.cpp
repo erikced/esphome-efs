@@ -13,9 +13,7 @@ void Efs::setup() {
 }
 
 void Efs::loop() {
-    if (this->ready_to_request_data_()) {
-        this->receive_telegram_();
-    }
+    this->receive_telegram_();
 }
 
 bool Efs::ready_to_request_data_() {
