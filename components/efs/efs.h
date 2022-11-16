@@ -48,6 +48,7 @@ class Efs : public Component, public uart::UARTDevice {
   bool header_found_{false};
   bool footer_found_{false};
   bool crc_check_;
+  uint32_t loop_counter_{0};
 };
 }  // namespace efs
 }  // namespace esphome

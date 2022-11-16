@@ -13,6 +13,7 @@ void Efs::setup() {
 }
 
 void Efs::loop() {
+    ++_loop_counter;
     this->receive_telegram_();
 }
 
