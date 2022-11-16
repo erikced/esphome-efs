@@ -43,6 +43,8 @@ class Efs : public Component, public uart::UARTDevice {
   char *telegram_{nullptr};
   size_t bytes_read_{0};
   uint32_t last_read_time_{0};
+  uint32_t telegram_counter_{0};
+  uint32_t read_counter_{0};
   bool header_found_{false};
   bool footer_found_{false};
   bool crc_check_;

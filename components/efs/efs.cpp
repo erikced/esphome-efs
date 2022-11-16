@@ -23,6 +23,7 @@ bool Efs::ready_to_request_data_() {
     if (!this->requesting_data_) {
         while (this->available()) {
             this->read();
+            ++this->read_counter_;
         }
     }
     return this->requesting_data_;
@@ -67,6 +68,7 @@ void Efs::stop_requesting_data_() {
         ESP_LOGV(TAG, "Stop reading data from P1 port");
         while (this->available()) {
             this->read();
+            ++this->read_counter_;
         }
         this->requesting_data_ = false;
     }
@@ -82,10 +84,12 @@ void Efs::reset_telegram_() {
 void Efs::receive_telegram_() {
     while (this->available_within_timeout_()) {
         const char c = this->read();
+        ++this->read_counter_()
         if (c == '~') {
             ESP_LOGV(TAG, "Header of telegram found");
             this->reset_telegram_();
             this->header_found_ = true;
+            ++this->telegram_counter;
         }
 
         if (!this->header_found_)
@@ -121,6 +125,8 @@ void Efs::dump_config() {
     ESP_LOGCONFIG(TAG, "EFS:");
     ESP_LOGCONFIG(TAG, "  Max telegram length: %d", this->max_telegram_len_);
     ESP_LOGCONFIG(TAG, "  Receive timeout: %.1fs", this->receive_timeout_ / 1e3f);
+    ESP_LOGV(TAG, "  Telegrams read: %u", this->telegram_counter_);
+    ESP_LOGV(TAG, "  Bytes read: %u", this->bytes_read_);
 }
 
 }  // namespace efs
