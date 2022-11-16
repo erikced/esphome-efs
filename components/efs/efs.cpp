@@ -13,7 +13,7 @@ void Efs::setup() {
 }
 
 void Efs::loop() {
-    ++_loop_counter;
+    ++this->loop_counter_;
     this->receive_telegram_();
 }
 
@@ -128,6 +128,7 @@ void Efs::dump_config() {
     ESP_LOGV(TAG, "  Bytes read: %u", this->bytes_read_);
     ESP_LOGV(TAG, "  Last read time: %u", this->last_read_time_);
     ESP_LOGV(TAG, "  Requesting data: %s", this->requesting_data_ ? "true" : "false");
+    ESP_LOGV(TAG, "  Loop count: %s", this->loop_counter_ ? "true" : "false");
 }
 
 }  // namespace efs
