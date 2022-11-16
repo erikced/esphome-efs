@@ -82,7 +82,7 @@ void Efs::reset_telegram_() {
 }
 
 void Efs::receive_telegram_() {
-    while (this->available_within_timeout_()) {
+    while (this->available()) {
         const char c = this->read();
         ++this->read_counter_;
         if (c == '~') {
