@@ -30,15 +30,15 @@ constexpr std::array<uint16_t, 256> init_table() {
 class Crc16Calculator {
  public:
   void update(const char &ch) {
-    uint8_t index = static_cast<uint8_t>(crc ^ ch);
-    this->crc = (this->crc >> 8) ^ this->table_[index];
+    const auto index = static_cast<uint8_t>(crc_ ^ ch);
+    crc_ = (crc_ >> 8) ^ table_[index];
   };
 
-  void reset() { crc = 0; };
-
-  uint16_t crc = 0;
+  uint16_t crc() { return crc_; };
+  void reset() { crc_ = 0; };
 
  protected:
+  uint16_t crc_ = 0;
   static constexpr auto table_ = util::init_table();
 };
 

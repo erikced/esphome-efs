@@ -19,9 +19,7 @@ class Reader {
     ++buffer;
     while (buffer_end - buffer > static_cast<ptrdiff_t>(HEADER_SIZE) && num_objects-- > 0) {
       const Header *header = reinterpret_cast<const Header *>(buffer);
-      if (header->object_size < HEADER_SIZE + 1
-          || buffer_end - buffer < header->object_size
-          || buffer[header->object_size - 1] != '\0') {
+      if (header->object_size < HEADER_SIZE + 1 || buffer_end - buffer < header->object_size) {
         return;
       }
       callback(header->obis_code, header->num_values, &buffer[HEADER_SIZE]);

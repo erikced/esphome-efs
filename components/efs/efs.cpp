@@ -255,7 +255,7 @@ void Efs::receive_encrypted_telegram_() {
 bool Efs::parse_telegram() {
   this->stop_requesting_data_();
 
-  Parser::Status status = this->parser_.parse_telegram(this->telegram_, this->bytes_read_);
+  Status status = this->parser_.parse_telegram(this->telegram_, this->bytes_read_);
   const char *err_msg = nullptr;
   switch (status) {
     case Parser::Status::Ok:
