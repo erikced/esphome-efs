@@ -258,25 +258,28 @@ bool Efs::parse_telegram() {
   Status status = this->parser_.parse_telegram(this->telegram_, this->bytes_read_);
   const char *err_msg = nullptr;
   switch (status) {
-    case Parser::Status::Ok:
+    case Status::Ok:
       break;
-    case Parser::Status::StartNotFound:
+    case Status::StartNotFound:
       err_msg = "Start of message not found.";
       break;
-    case Parser::Status::WriteOverflow:
+    case Status::WriteOverflow:
       err_msg = "Write overflow occured when parsing telegram.";
       break;
-    case Parser::Status::InvalidObisCode:
+    case Status::InvalidObisCode:
       err_msg = "Invalid ObisCode found.";
       break;
-    case Parser::Status::ParsingFailed:
+    case Status::ParsingFailed:
       err_msg = "Failed to parse telegram.";
       break;
-    case Parser::Status::InvalidCrc:
+    case Status::InvalidCrc:
       err_msg = "Invalid telegram CRC checksum.";
       break;
-    case Parser::Status::CrcCheckFailed:
+    case Status::CrcCheckFailed:
       err_msg = "Telegram CRC checksum validation failed.";
+      break;
+    case Status::ObjectTooLong:
+      err_msg = "Received an object whose value(s) exceed the maximum allowed length.";
       break;
   }
   if (err_msg) {
