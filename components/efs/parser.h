@@ -25,7 +25,7 @@ template<typename CrcCalculator> class BaseParser {
  public:
   Status parse_telegram(char *buffer, size_t buffer_size) {
     reset_state(buffer, buffer_size);
-    if (ch_ != '/') {
+    if (next_char() != '/') {
       return Status::StartNotFound;
     }
     next_char();
@@ -56,11 +56,13 @@ template<typename CrcCalculator> class BaseParser {
 
  protected:
   const char &next_char(bool update_crc = true) {
-    if (read_pos_ != buffer_end_ && ++read_pos_ != buffer_end_) {
-      ch_ = *read_pos_;
+    eod_ |= read_pos_ == buffer_end_;
+    if (!eod_) {
+      ch_ = *read_pos_++;
       if (update_crc) {
         crc_calculator_.update(ch_);
       }
+      eod_ = ch_ == '\0';
     } else {
       ch_ = '\0';
     }
@@ -79,14 +81,12 @@ template<typename CrcCalculator> class BaseParser {
   }
 
   void reset_state(char *buffer, size_t buffer_size) {
-    buffer_ = buffer;
-    buffer_end_ = &buffer_[buffer_size];
-    read_pos_ = &buffer_[-1];
-    write_pos_ = buffer_;
+    read_pos_ = write_pos_ = buffer;
+    buffer_end_ = &buffer[buffer_size];
     status_ = Status::Ok;
     crc_calculator_.reset();
-    // Step to the first actual character
-    next_char();
+    eod_ = buffer_size == 0;
+  }
   }
 
   ObisCode read_obis_code() {
@@ -109,7 +109,7 @@ template<typename CrcCalculator> class BaseParser {
         // The final part of the obis code is usually omitted
         if (part == 4) {
             obis_code[4] = cur;
-        } else if (part != 5 || (part == 5 && cur != 255)) { 
+        } else if (part != 5 || (part == 5 && cur != 255)) {
           // Reading 6-part obis codes is supported but the 6th part must be 255
           // since only 5 parts are stored.
           status_ = Status::InvalidObisCode;
@@ -128,11 +128,11 @@ template<typename CrcCalculator> class BaseParser {
     }
     auto *header = write<Header>(Header{obis_code, 0, 0});
     while (status_ == Status::Ok) {
-      if (ch_ == '\0') {
+      if (eod_) {
         status_ = Status::ParsingFailed;
       } else if (ch_ == '(') {
         ++(header->num_values);
-        while (next_char() != ')' && ch_ != '\0') {
+        while (next_char() != ')' && !eod_) {
           write(ch_);
         }
         write('\0');
@@ -175,7 +175,7 @@ template<typename CrcCalculator> class BaseParser {
     bool whitespace_found = is_whitespace();
     while (true) {
       next_char();
-      if (ch_ == '\0') {
+      if (eod_) {
         return false;
       } else if (whitespace_found && !is_whitespace()) {
         return true;
@@ -188,10 +188,10 @@ template<typename CrcCalculator> class BaseParser {
   CrcCalculator crc_calculator_{};
 
  private:
-  const char *read_pos_;
-  char *write_pos_;
-  char ch_;
-  char *buffer_ = nullptr;
+  const char *read_pos_ = nullptr;
+  char *write_pos_ = nullptr;
+  char ch_ = '\0';
+  bool eod_ = false;
   const char *buffer_end_ = nullptr;
   Status status_ = Status::Ok;
 };

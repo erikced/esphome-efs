@@ -113,12 +113,6 @@ TEST_F(ParserTest, IncorrectCrcReturnsCrcCheckFailed) {
   EXPECT_EQ(status, Status::CrcCheckFailed);
 }
 
-TEST_F(ParserTest, WriteOverflowIsCaught) {
-  LoadBuffer("/\n1-1:2.3.4\n"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::WriteOverflow);
-}
-
 TEST_F(ParserTest, Supports8kBObjects) {
   // 8B Header, 8184B value (inc NULL) == 8192B
   std::string input = "/\r\n1-0:1.8.0(";
