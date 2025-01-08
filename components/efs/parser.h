@@ -1,7 +1,6 @@
 #pragma once
 #include <cstdint>
 #include <cstddef>
-#include <limits>
 
 #include "crc16.h"
 #include "header.h"
@@ -19,6 +18,8 @@ enum Status {
   InvalidCrc,
   CrcCheckFailed,
 };
+
+const uint32_t MAX_OBJECT_SIZE = 8192;
 
 template<typename CrcCalculator> class BaseParser {
  public:
@@ -90,22 +91,27 @@ template<typename CrcCalculator> class BaseParser {
 
   ObisCode read_obis_code() {
     size_t part = 0;
-    ObisCode obis_code{0, 0, 0, 0, 0, 0};
+    uint8_t cur = 0;
+    ObisCode obis_code{0, 0, 0, 0, 0};
     while (status_ == Status::Ok) {
       if (ch_ >= '0' && ch_ <= '9') {
         const uint8_t val = ch_ - '0';
-        if (obis_code.value[part] > 25 || (obis_code.value[part] == 25 && val > 5)) {
+        if (cur > 25 || (cur == 25 && val > 5)) {
           status_ = Status::InvalidObisCode;
           break;
         }
-        obis_code.value[part] = obis_code.value[part] * 10 + val;
+        cur = cur * 10 + val;
       } else if ((ch_ == '-' || ch_ == ':' || ch_ == '.' || ch_ == '*') && part <= 4) {
+        obis_code[part] = cur;
+        cur = 0;
         ++part;
       } else {
         // The final part of the obis code is usually omitted
         if (part == 4) {
-          obis_code.value[5] = 255u;
-        } else if (part != 5) {
+            obis_code[4] = cur;
+        } else if (part != 5 || (part == 5 && cur != 255)) { 
+          // Reading 6-part obis codes is supported but the 6th part must be 255
+          // since only 5 parts are stored.
           status_ = Status::InvalidObisCode;
         }
         break;
@@ -131,11 +137,11 @@ template<typename CrcCalculator> class BaseParser {
         }
         write('\0');
       } else if (ch_ == '\r' || ch_ == '\n') {
-        uint16_t offset = write_pos_ - reinterpret_cast<char *>(header);
-        if (offset > std::numeric_limits<uint8_t>::max()) {
+        uint32_t offset = write_pos_ - reinterpret_cast<const char *>(header);
+        if (offset > MAX_OBJECT_SIZE) {
           status_ = Status::ObjectTooLong;
         } else {
-          header->object_size = static_cast<uint8_t>(offset);
+          header->object_size = static_cast<uint16_t>(offset);
         }
         return;
       }

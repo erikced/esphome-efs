@@ -46,7 +46,7 @@ using namespace esphome::efs;
 using OutputObject = std::tuple<const ObisCode, const std::vector<const char *>>;
 
 const OutputObject expected_output[]{
-    {ObisCode{0, 0, 0, 0, 0, 0}, {"ISk5\\2MT382-1000"}},
+    {ObisCode{0, 0, 0, 0, 0}, {"ISk5\\2MT382-1000"}},
     {ObisCode{1, 3, 0, 2, 8}, {"40"}},
     {ObisCode{0, 0, 1, 0, 0}, {"101209113020W"}},
     {ObisCode{0, 0, 96, 1, 1}, {"4B384547303034303436333935353037"}},

@@ -12,23 +12,23 @@ class ReaderTest : public ::testing::Test {
 
 TEST_F(ReaderTest, NormalOperation) {
   const char buffer[] = "Test\0\x02"
-                        "\x01\x02\x03\x04\x05\x06\x01\x13Test again\0"
-                        "\x07\x08\x09\x0A\x0B\x0C\x02\x14qwerty\0uiop\0";
+                        "\x01\x02\x03\x04\x05\x01\x13\x00Test again\0"
+                        "\x07\x08\x09\x0A\x0B\x02\x14\x00qwerty\0uiop\0";
   size_t buffer_size = sizeof(buffer);
 
   int call_count = 0;
   reader.read_parsed_data(buffer, buffer_size, [&](const ObisCode &obis, uint8_t num_values, const char *data) {
     ++call_count;
     if (call_count == 1) {
-      EXPECT_EQ(obis, ObisCode(0, 0, 0, 0, 0, 0));
+      EXPECT_EQ(obis, ObisCode(0, 0, 0, 0, 0));
       EXPECT_EQ(num_values, 1);
       EXPECT_STREQ(data, "Test");
     } else if (call_count == 2) {
-      EXPECT_EQ(obis, ObisCode(1, 2, 3, 4, 5, 6));
+      EXPECT_EQ(obis, ObisCode(1, 2, 3, 4, 5));
       EXPECT_EQ(num_values, 1);
       EXPECT_STREQ(data, "Test again");
     } else if (call_count == 3) {
-      EXPECT_EQ(obis, ObisCode(7, 8, 9, 10, 11, 12));
+      EXPECT_EQ(obis, ObisCode(7, 8, 9, 10, 11));
       EXPECT_EQ(num_values, 2);
       EXPECT_STREQ(data, "qwerty");
       EXPECT_STREQ(data + 7, "uiop");
@@ -44,7 +44,7 @@ TEST_F(ReaderTest, EmptyBuffer) {
   int call_count = 0;
   reader.read_parsed_data(buffer, buffer_size, [&](const ObisCode &obis_code, uint8_t num_values, const char *data) {
     ++call_count;
-    EXPECT_EQ(obis_code, ObisCode(0, 0, 0, 0, 0, 0));
+    EXPECT_EQ(obis_code, ObisCode(0, 0, 0, 0, 0));
     EXPECT_EQ(num_values, 1);
     EXPECT_STREQ(data, "");
   });
@@ -72,7 +72,7 @@ TEST_F(ReaderTest, InsufficientHeaderData) {
 
 TEST_F(ReaderTest, InvalidObjectSize) {
   const char buffer[] = "Test\0\x01"
-                        "\x01\x02\x03\x04\x05\x06\x01\x13XXXXXXXXX\0";
+                        "\x01\x02\x03\x04\x05\x01\x13\x00XXXXXXXXX\0";
   size_t buffer_size = sizeof(buffer) - 1;
 
   int call_count = 0;

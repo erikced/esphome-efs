@@ -1,8 +1,9 @@
 #pragma once
-#include "header.h"
-
+#include <cstddef>
 #include <cstdint>
 #include <string.h>
+
+#include "header.h"
 
 namespace esphome {
 namespace efs {
@@ -12,7 +13,7 @@ class Reader {
     if (buffer == nullptr) {
       return;
     }
-    callback(ObisCode(0, 0, 0, 0, 0, 0), 1, buffer);
+    callback(ObisCode(0, 0, 0, 0, 0), 1, buffer);
     const char *buffer_end = buffer + buffer_size;
     buffer += strnlen(buffer, buffer_size) + 1;
     uint8_t num_objects = *reinterpret_cast<const uint8_t *>(buffer);
