@@ -279,7 +279,16 @@ bool Efs::parse_telegram() {
       err_msg = "Telegram CRC checksum validation failed.";
       break;
     case Status::ObjectTooLong:
-      err_msg = "Received an object whose value(s) exceed the maximum allowed length.";
+      err_msg = "Received an object whose parsed size exceeds the maximum allowed length (8kB).";
+      break;
+    case Status::HeaderTooLong:
+      err_msg = "Received a header that exceeds the maximum allowed length (255B).";
+      break;
+    case Status::TooManyObjects:
+      err_msg = "Received a telegram with more than the allowed number of entries (255).";
+      break;
+    case Status::BufferNotAligned:
+      err_msg = "The telegram buffer is not aligned to 2 bytes.";
       break;
   }
   if (err_msg) {
