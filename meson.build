@@ -1,7 +1,7 @@
 project('reader_library', 'cpp',
   version : '0.1',
-  default_options : ['warning_level=3', 'cpp_std=c++17'])
-add_project_arguments('-Werror', '-pedantic', language : 'cpp')
+  default_options : ['warning_level=3', 'cpp_std=c++17', 'werror=true'])
+add_project_arguments('-pedantic', language : 'cpp')
 
 gtest = subproject('gtest')
 gtest_dep = dependency('gtest', main : true)

@@ -1,6 +1,7 @@
 #pragma once
-#include <cstdint>
+#include <cctype>
 #include <cstddef>
+#include <cstdint>
 
 #include "crc16.h"
 #include "header.h"
@@ -10,45 +11,60 @@ namespace esphome {
 namespace efs {
 enum Status {
   Ok,
+  BufferNotAligned,
   StartNotFound,
   WriteOverflow,
   InvalidObisCode,
   ParsingFailed,
+  HeaderTooLong,
   ObjectTooLong,
+  TooManyObjects,
   InvalidCrc,
   CrcCheckFailed,
 };
 
 const uint32_t MAX_OBJECT_SIZE = 8192;
+const uint32_t MAX_HEADER_SIZE = 256;
+const uint32_t MAX_NUM_OBJECTS = 255;
 
 template<typename CrcCalculator> class BaseParser {
  public:
   Status parse_telegram(char *buffer, size_t buffer_size) {
     reset_state(buffer, buffer_size);
-    if (next_char() != '/') {
-      return Status::StartNotFound;
+    if (reinterpret_cast<uintptr_t>(buffer) % 2 != 0) {
+      return Status::BufferNotAligned;
     }
-    next_char();
-    while (ch_ != '\r' && ch_ != '\n' && ch_ != '\0') {
-      write(ch_);
-      next_char();
-    }
-    write('\0');
-    while (ch_ != '\n' && ch_ != '\0') {
-      next_char();
+    read_header();
+    if (status_ != Status::Ok) {
+      return status_;
     }
     uint8_t *num_objects = write<uint8_t>(0);
-    while (status_ == Status::Ok && next_object()) {
-      if (ch_ == '!') {
-        write('\0');
+    if ((write_pos_ - buffer) % 2 != 0) {
+      // Add padding to align header to 2 bytes
+      write('\0');
+    }
+    while (status_ == Status::Ok) {
+      next_char();
+      if (eod_) {
+        break;
+      } else if (std::isspace(ch_) != 0) {
+        continue;
+      } else if (ch_ == '!') {
+        // CRC-16 checksum marker
         uint16_t crc = read_crc();
         if (crc != crc_calculator_.crc()) {
           status_ = Status::CrcCheckFailed;
         }
-        break;
+      } else if (std::isdigit(ch_) != 0) {
+        // OBIS code
+        if (*num_objects == MAX_NUM_OBJECTS) {
+          status_ = Status::TooManyObjects;
+        } else {
+          read_object();
+          ++(*num_objects);
+        }
       } else {
-        read_object();
-        ++(*num_objects);
+        status_ = Status::ParsingFailed;
       }
     }
     return status_;
@@ -87,6 +103,29 @@ template<typename CrcCalculator> class BaseParser {
     crc_calculator_.reset();
     eod_ = buffer_size == 0;
   }
+
+  void read_header() {
+    if (next_char() != '/') {
+      status_ = Status::StartNotFound;
+      return;
+    }
+    const char *const start = write_pos_;
+    do {
+      if (next_char() == eod_) {
+        status_ = Status::ParsingFailed;
+      } else if (ch_ == '\r') {
+        if (next_char() != '\n') {
+          status_ = Status::ParsingFailed;
+        }
+        write('\0');
+        if (write_pos_ - start > MAX_HEADER_SIZE) {
+          status_ = Status::HeaderTooLong;
+        }
+        break;
+      } else {
+        write(ch_);
+      }
+    } while (status_ == Status::Ok);
   }
 
   ObisCode read_obis_code() {
@@ -94,7 +133,7 @@ template<typename CrcCalculator> class BaseParser {
     uint8_t cur = 0;
     ObisCode obis_code{0, 0, 0, 0, 0};
     while (status_ == Status::Ok) {
-      if (ch_ >= '0' && ch_ <= '9') {
+      if (std::isdigit(ch_) != 0) {
         const uint8_t val = ch_ - '0';
         if (cur > 25 || (cur == 25 && val > 5)) {
           status_ = Status::InvalidObisCode;
@@ -108,7 +147,7 @@ template<typename CrcCalculator> class BaseParser {
       } else {
         // The final part of the obis code is usually omitted
         if (part == 4) {
-            obis_code[4] = cur;
+          obis_code[4] = cur;
         } else if (part != 5 || (part == 5 && cur != 255)) {
           // Reading 6-part obis codes is supported but the 6th part must be 255
           // since only 5 parts are stored.
@@ -136,12 +175,18 @@ template<typename CrcCalculator> class BaseParser {
           write(ch_);
         }
         write('\0');
-      } else if (ch_ == '\r' || ch_ == '\n') {
-        uint32_t offset = write_pos_ - reinterpret_cast<const char *>(header);
-        if (offset > MAX_OBJECT_SIZE) {
+      } else if (ch_ == '\r') {
+        ptrdiff_t object_size = write_pos_ - reinterpret_cast<const char *>(header);
+        if (next_char() != '\n') {
+          status_ = Status::ParsingFailed;
+        } else if (object_size % 2 != 0) {
+          write('\0');
+          ++object_size;
+        }
+        if (object_size > MAX_OBJECT_SIZE) {
           status_ = Status::ObjectTooLong;
         } else {
-          header->object_size = static_cast<uint16_t>(offset);
+          header->object_size = static_cast<uint16_t>(object_size);
         }
         return;
       }
@@ -169,22 +214,6 @@ template<typename CrcCalculator> class BaseParser {
     return checksum;
   }
 
-  bool is_whitespace() const { return ch_ == '\r' || ch_ == '\n' || ch_ == ' '; }
-
-  bool next_object() {
-    bool whitespace_found = is_whitespace();
-    while (true) {
-      next_char();
-      if (eod_) {
-        return false;
-      } else if (whitespace_found && !is_whitespace()) {
-        return true;
-      } else if (!whitespace_found && is_whitespace()) {
-        whitespace_found = true;
-      }
-    }
-  }
-
   CrcCalculator crc_calculator_{};
 
  private:
@@ -197,5 +226,6 @@ template<typename CrcCalculator> class BaseParser {
 };
 
 using Parser = BaseParser<Crc16Calculator>;
+
 }  // namespace efs
 }  // namespace esphome

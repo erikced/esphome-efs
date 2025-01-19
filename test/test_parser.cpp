@@ -49,6 +49,13 @@ TEST_F(ParserTest, ValidStart) {
   EXPECT_EQ(status, Status::Ok);
 }
 
+/*
+|hhhhhhhhhhhhhhhhh|0|0?|
+|NN|
+|H1|v .. |0|v2 .. |0|v3 ..|
+|H2|v .. |0|
+|H3|v .. |0|
+*/
 TEST_F(ParserTest, ValidTruncatedObisCode) {
   LoadBuffer("/XYZ\r\n1-0:1.8.0(0)\r\n!0000"sv);
   auto status = parser.parse_telegram(buffer.data(), buffer.size());
@@ -114,13 +121,13 @@ TEST_F(ParserTest, IncorrectCrcReturnsCrcCheckFailed) {
 }
 
 TEST_F(ParserTest, Supports8kBObjects) {
-  // 8B Header, 8184B value (inc NULL) == 8192B
+  // 8B Header, 8182B value + NULL terminator + padding (NULL) = 8192B
   std::string input = "/\r\n1-0:1.8.0(";
-  for (int i = 0; i < 1023; i++) {
-    input += "01234567";
+  for (int i = 0; i < 818; i++) {
+    input += "0123456789";
   }
-  input.pop_back();
-  input += ")\r\n!0000\r\n";
+  input += "01";
+  input += ")\r\n";
 
   LoadBuffer(input);
   auto status = parser.parse_telegram(buffer.data(), buffer.size());
@@ -129,10 +136,11 @@ TEST_F(ParserTest, Supports8kBObjects) {
 
 TEST_F(ParserTest, ReturnsObjectTooLongIfObjectExceeds8kB) {
   std::string input = "/ISK5\r\n1-0:1.8.0(";
-  for (int i = 0; i < 1023; i++) {
-    input += "01234567";
+  for (int i = 0; i < 818; i++) {
+    input += "0123456789";
   }
-  input += ")\r\n!";
+  input += "0123";
+  input += ")\r\n!1234";
 
   LoadBuffer(input);
   auto status = parser.parse_telegram(buffer.data(), buffer.size());
@@ -228,7 +236,7 @@ TEST_F(ParserTest, ParsedDataLayout) {
   EXPECT_EQ(header5->obis_code[3], 8);
   EXPECT_EQ(header5->obis_code[4], 0);
   EXPECT_EQ(header5->num_values, 1);
-  EXPECT_EQ(header5->object_size, sizeof(Header) + 7);
+  EXPECT_EQ(header5->object_size, sizeof(Header) + 8);
   char *value5_1 = current_pos + sizeof(Header);
   EXPECT_STREQ(value5_1, "3.1415");
 }

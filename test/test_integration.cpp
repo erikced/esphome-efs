@@ -84,7 +84,7 @@ class IntegrationTest : public ::testing::Test {
 
   Parser parser;
   Reader reader;
-  char buffer[1024];
+  alignas(2) char buffer[1024];
 };
 
 TEST_F(IntegrationTest, TestSampleTelegramParsing) {
