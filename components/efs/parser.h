@@ -6,37 +6,25 @@
 #include "crc16.h"
 #include "header.h"
 #include "obis_code.h"
+#include "status.h"
+#include "result.h"
 
 namespace esphome {
 namespace efs {
-enum Status {
-  Ok,
-  BufferNotAligned,
-  StartNotFound,
-  WriteOverflow,
-  InvalidObisCode,
-  ParsingFailed,
-  HeaderTooLong,
-  ObjectTooLong,
-  TooManyObjects,
-  InvalidCrc,
-  CrcCheckFailed,
-};
-
 const uint32_t MAX_OBJECT_SIZE = 8192;
 const uint32_t MAX_HEADER_SIZE = 256;
 const uint32_t MAX_NUM_OBJECTS = 255;
 
 template<typename CrcCalculator> class BaseParser {
  public:
-  Status parse_telegram(char *buffer, size_t buffer_size) {
     reset_state(buffer, buffer_size);
+  Result parse_telegram(char *buffer, size_t buffer_size) {
     if (reinterpret_cast<uintptr_t>(buffer) % 2 != 0) {
-      return Status::BufferNotAligned;
+      return Result(Status::BufferNotAligned, nullptr, 0);
     }
     read_header();
     if (status_ != Status::Ok) {
-      return status_;
+      return Result(status_, nullptr, 0);
     }
     uint8_t *num_objects = write<uint8_t>(0);
     if ((write_pos_ - buffer) % 2 != 0) {
@@ -67,7 +55,7 @@ template<typename CrcCalculator> class BaseParser {
         status_ = Status::ParsingFailed;
       }
     }
-    return status_;
+    return Result(status_, buffer, write_pos_ - buffer);
   }
 
  protected:

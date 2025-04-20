@@ -33,20 +33,20 @@ class ParserTest : public ::testing::Test {
 
 TEST_F(ParserTest, EmptyBuffer) {
   LoadBuffer(""sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::StartNotFound);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::StartNotFound);
 }
 
 TEST_F(ParserTest, InvalidStart) {
   LoadBuffer("X123"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::StartNotFound);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::StartNotFound);
 }
 
 TEST_F(ParserTest, ValidStart) {
   LoadBuffer("/XYZ\r\n"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::Ok);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::Ok);
 }
 
 /*
@@ -58,33 +58,33 @@ TEST_F(ParserTest, ValidStart) {
 */
 TEST_F(ParserTest, ValidTruncatedObisCode) {
   LoadBuffer("/XYZ\r\n1-0:1.8.0(0)\r\n!0000"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::Ok);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::Ok);
 }
 
 TEST_F(ParserTest, ValidCompleteObisCode) {
   LoadBuffer("/XYZ\r\n1-0:1.8.0*255(0)\r\n!0000"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::Ok);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::Ok);
 }
 
 TEST_F(ParserTest, ValidCompleteObisCodeNotEndingWith255IsNotSupported) {
   LoadBuffer("/XYZ\r\n1-0:1.8.0*254(0)\r\n!0000"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::InvalidObisCode);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::InvalidObisCode);
 }
 
 TEST_F(ParserTest, InvalidObisCode) {
   LoadBuffer("/XYZ\r\n1-0:999.8.0(0)\r\n!0000"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::InvalidObisCode);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::InvalidObisCode);
 }
 
 TEST_F(ParserTest, CompleteValidTelegram) {
   // Example of a valid telegram with identifier, OBIS code, value, and CRC
   LoadBuffer("/ISK5\r\n1-0:1.8.0*255(123456.78)\r\n!0000\r\n"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::Ok);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::Ok);
 }
 
 TEST_F(ParserTest, MultipleObjects) {
@@ -92,32 +92,32 @@ TEST_F(ParserTest, MultipleObjects) {
              "1-0:1.8.0(123456.78)\r\n"
              "1-0:2.8.0(987654.32)\r\n"
              "!0000\r\n"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::Ok);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::Ok);
 }
 
 TEST_F(ParserTest, InvalidCrcCharactersReturnsInvalidCrc) {
   LoadBuffer("/ISK5\r\n1-0:1.8.0(123)\r\n!XXXX\r\n"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::InvalidCrc);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::InvalidCrc);
 }
 
 TEST_F(ParserTest, IncompleteCrcValueReturnsInvalidCrc) {
   LoadBuffer("/ISK5\r\n1-0:1.8.0(123)\r\n!\r\n"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::InvalidCrc);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::InvalidCrc);
 }
 
 TEST_F(ParserTest, MissingCrcWithoutMarkerIsIgnored) {
   LoadBuffer("/ISK5\r\n1-0:1.8.0*255(123)\r\n"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::Ok);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::Ok);
 }
 
 TEST_F(ParserTest, IncorrectCrcReturnsCrcCheckFailed) {
   LoadBuffer("/ISK5\r\n1-0:1.8.0(123)\r\n!1234\r\n"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::CrcCheckFailed);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::CrcCheckFailed);
 }
 
 TEST_F(ParserTest, Supports8kBObjects) {
@@ -130,8 +130,8 @@ TEST_F(ParserTest, Supports8kBObjects) {
   input += ")\r\n";
 
   LoadBuffer(input);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::Ok);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::Ok);
 }
 
 TEST_F(ParserTest, ReturnsObjectTooLongIfObjectExceeds8kB) {
@@ -143,14 +143,14 @@ TEST_F(ParserTest, ReturnsObjectTooLongIfObjectExceeds8kB) {
   input += ")\r\n!1234";
 
   LoadBuffer(input);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::ObjectTooLong);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::ObjectTooLong);
 }
 
 TEST_F(ParserTest, HandlesMultipleValuesForObject) {
   LoadBuffer("/ISK5\r\n1-0:1.8.0*255(123)(456)(789)\r\n!0000\r\n"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::Ok);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::Ok);
 }
 
 TEST_F(ParserTest, ParsedDataLayout) {
@@ -161,8 +161,8 @@ TEST_F(ParserTest, ParsedDataLayout) {
              "1-0:4.8.0\r\n"
              "1-0:5.8.0(3.1415)\r\n"
              "!0000\r\n"sv);
-  auto status = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(status, Status::Ok);
+  auto result = parser.parse_telegram(buffer.data(), buffer.size());
+  EXPECT_EQ(result.status, Status::Ok);
 
   // Check the identifier string (without the /)
   EXPECT_STREQ(buffer.data(), "ISK5");

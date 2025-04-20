@@ -4,7 +4,6 @@
 
 #include "obis_code.h"
 #include "parser.h"
-#include "reader.h"
 
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
@@ -77,7 +76,6 @@ class Efs : public Component, public uart::UARTDevice {
   bool footer_found_{false};
 
   Parser parser_;
-  Reader reader_;
 
   std::map<ObisCode, sensor::Sensor *> sensors_{};
   std::vector<uint8_t> decryption_key_{};

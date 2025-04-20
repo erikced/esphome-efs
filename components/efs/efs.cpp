@@ -3,6 +3,8 @@
 #include "efs.h"
 #include "esphome/core/log.h"
 
+#include <stdlib.h>
+
 #include <AES.h>
 #include <Crypto.h>
 #include <GCM.h>
@@ -255,9 +257,9 @@ void Efs::receive_encrypted_telegram_() {
 bool Efs::parse_telegram() {
   this->stop_requesting_data_();
 
-  Status status = this->parser_.parse_telegram(this->telegram_, this->bytes_read_);
+  const auto result = this->parser_.parse_telegram(this->telegram_, this->bytes_read_);
   const char *err_msg = nullptr;
-  switch (status) {
+  switch (result.status) {
     case Status::Ok:
       break;
     case Status::StartNotFound:
@@ -296,21 +298,30 @@ bool Efs::parse_telegram() {
     return false;
   }
 
-  this->reader_.read_parsed_data(this->telegram_, this->bytes_read_,
-                                 [this](const ObisCode &obis_code, const uint8_t value_count, const char *data) {
-                                   const auto res = this->sensors_.find(obis_code);
-                                   if (res != this->sensors_.end()) {
-                                     char *value_end;
-                                     const auto value = std::strtof(data, &value_end);
-                                     if (value_end == data) {
-                                       ESP_LOGE(TAG, "Error: Unable to parse \"%s\" as a floating point number", data);
-                                     } else if (value == HUGE_VALF) {
-                                       ESP_LOGE(TAG, "Floating point value overflow occured when parsing \"%s\"", data);
-                                     } else {
-                                       res->second->publish_state(value);
-                                     }
-                                   }
-                                 });
+  for (const auto &object : result) {
+    const auto res = this->sensors_.find(object.obis_code());
+    if (res == this->sensors_.end()) {
+      continue;
+    }
+    const auto &sensor = res->second;
+    if (object.num_values() <= 0) {
+      ESP_LOGW(TAG, "No value found for OBIS code %i-%i:%i.%i.%i", object.obis_code()[0], object.obis_code()[1],
+               object.obis_code()[2], object.obis_code()[3], object.obis_code()[4]);
+      continue;
+    }
+    //
+    const char *data = std::get<0>(*object.begin());
+    char *value_end{};
+    const auto value = std::strtof(data, &value_end);
+    if (value_end == data) {
+      ESP_LOGE(TAG, "Error: Unable to parse \"%s\" as a floating point number", data);
+    } else if (value == HUGE_VALF) {
+      ESP_LOGE(TAG, "Floating point value overflow occured when parsing \"%s\"", data);
+    } else {
+      res->second->publish_state(value);
+    }
+  }
+
   this->status_clear_warning();
   return true;
 }
