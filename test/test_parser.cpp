@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <algorithm>
 #include <cstring>
 #include <string>
@@ -8,8 +9,10 @@
 #include "components/efs/header.h"
 #include "components/efs/parser.h"
 
-using namespace esphome::efs;
-using namespace std::literals;
+using std::literals::operator""sv;
+
+namespace esphome::efs {
+namespace {
 
 class StubCrcCalculator {
  public:
@@ -20,104 +23,96 @@ class StubCrcCalculator {
 
 class ParserTest : public ::testing::Test {
  protected:
-  void SetUp() override { buffer.clear(); }
+  void SetUp() override { buffer_.clear(); }
 
-  void LoadBuffer(const std::string_view &input) {
-    buffer.reserve(input.size());
-    std::copy(input.begin(), input.end(), std::back_inserter(buffer));
+  void load_buffer_(const std::string_view &input) {
+    buffer_.reserve(input.size());
+    std::copy(input.begin(), input.end(), std::back_inserter(buffer_));
   }
 
-  BaseParser<StubCrcCalculator> parser;
-  std::vector<char> buffer;
+  BaseParser<StubCrcCalculator> parser_;
+  std::vector<char> buffer_;
 };
 
 TEST_F(ParserTest, EmptyBuffer) {
-  LoadBuffer(""sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::StartNotFound);
+  load_buffer_(""sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::START_NOT_FOUND);
 }
 
 TEST_F(ParserTest, InvalidStart) {
-  LoadBuffer("X123"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::StartNotFound);
+  load_buffer_("X123"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::START_NOT_FOUND);
 }
 
 TEST_F(ParserTest, ValidStart) {
-  LoadBuffer("/XYZ\r\n"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::Ok);
+  load_buffer_("/XYZ\r\n"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::OK);
 }
 
-/*
-|hhhhhhhhhhhhhhhhh|0|0?|
-|NN|
-|H1|v .. |0|v2 .. |0|v3 ..|
-|H2|v .. |0|
-|H3|v .. |0|
-*/
 TEST_F(ParserTest, ValidTruncatedObisCode) {
-  LoadBuffer("/XYZ\r\n1-0:1.8.0(0)\r\n!0000"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::Ok);
+  load_buffer_("/XYZ\r\n1-0:1.8.0(0)\r\n!0000"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::OK);
 }
 
 TEST_F(ParserTest, ValidCompleteObisCode) {
-  LoadBuffer("/XYZ\r\n1-0:1.8.0*255(0)\r\n!0000"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::Ok);
+  load_buffer_("/XYZ\r\n1-0:1.8.0*255(0)\r\n!0000"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::OK);
 }
 
 TEST_F(ParserTest, ValidCompleteObisCodeNotEndingWith255IsNotSupported) {
-  LoadBuffer("/XYZ\r\n1-0:1.8.0*254(0)\r\n!0000"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::InvalidObisCode);
+  load_buffer_("/XYZ\r\n1-0:1.8.0*254(0)\r\n!0000"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::INVALID_OBIS_CODE);
 }
 
 TEST_F(ParserTest, InvalidObisCode) {
-  LoadBuffer("/XYZ\r\n1-0:999.8.0(0)\r\n!0000"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::InvalidObisCode);
+  load_buffer_("/XYZ\r\n1-0:999.8.0(0)\r\n!0000"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::INVALID_OBIS_CODE);
 }
 
 TEST_F(ParserTest, CompleteValidTelegram) {
-  // Example of a valid telegram with identifier, OBIS code, value, and CRC
-  LoadBuffer("/ISK5\r\n1-0:1.8.0*255(123456.78)\r\n!0000\r\n"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::Ok);
+  load_buffer_("/ISK5\r\n1-0:1.8.0*255(123456.78)\r\n!0000\r\n"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::OK);
 }
 
 TEST_F(ParserTest, MultipleObjects) {
-  LoadBuffer("/ISK5\r\n"
-             "1-0:1.8.0(123456.78)\r\n"
-             "1-0:2.8.0(987654.32)\r\n"
-             "!0000\r\n"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::Ok);
+  load_buffer_("/ISK5\r\n"
+               "1-0:1.8.0(123456.78)\r\n"
+               "1-0:2.8.0(987654.32)\r\n"
+               "!0000\r\n"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::OK);
 }
 
 TEST_F(ParserTest, InvalidCrcCharactersReturnsInvalidCrc) {
-  LoadBuffer("/ISK5\r\n1-0:1.8.0(123)\r\n!XXXX\r\n"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::InvalidCrc);
+  load_buffer_("/ISK5\r\n1-0:1.8.0(123)\r\n!XXXX\r\n"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::INVALID_CRC);
 }
 
 TEST_F(ParserTest, IncompleteCrcValueReturnsInvalidCrc) {
-  LoadBuffer("/ISK5\r\n1-0:1.8.0(123)\r\n!\r\n"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::InvalidCrc);
+  load_buffer_("/ISK5\r\n1-0:1.8.0(123)\r\n!\r\n"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::INVALID_CRC);
 }
 
 TEST_F(ParserTest, MissingCrcWithoutMarkerIsIgnored) {
-  LoadBuffer("/ISK5\r\n1-0:1.8.0*255(123)\r\n"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::Ok);
+  load_buffer_("/ISK5\r\n1-0:1.8.0*255(123)\r\n"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::OK);
 }
 
 TEST_F(ParserTest, IncorrectCrcReturnsCrcCheckFailed) {
-  LoadBuffer("/ISK5\r\n1-0:1.8.0(123)\r\n!1234\r\n"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::CrcCheckFailed);
+  load_buffer_("/ISK5\r\n1-0:1.8.0(123)\r\n!1234\r\n"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::CRC_CHECK_FAILED);
 }
 
 TEST_F(ParserTest, Supports8kBObjects) {
@@ -129,9 +124,9 @@ TEST_F(ParserTest, Supports8kBObjects) {
   input += "01";
   input += ")\r\n";
 
-  LoadBuffer(input);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::Ok);
+  load_buffer_(input);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::OK);
 }
 
 TEST_F(ParserTest, ReturnsObjectTooLongIfObjectExceeds8kB) {
@@ -142,33 +137,33 @@ TEST_F(ParserTest, ReturnsObjectTooLongIfObjectExceeds8kB) {
   input += "0123";
   input += ")\r\n!1234";
 
-  LoadBuffer(input);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::ObjectTooLong);
+  load_buffer_(input);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::OBJECT_TOO_LONG);
 }
 
 TEST_F(ParserTest, HandlesMultipleValuesForObject) {
-  LoadBuffer("/ISK5\r\n1-0:1.8.0*255(123)(456)(789)\r\n!0000\r\n"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::Ok);
+  load_buffer_("/ISK5\r\n1-0:1.8.0*255(123)(456)(789)\r\n!0000\r\n"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::OK);
 }
 
 TEST_F(ParserTest, ParsedDataLayout) {
-  LoadBuffer("/ISK5\r\n"
-             "1-0:1.8.0*255(123456.78)\r\n"
-             "1-0:2.8.0*255(987654.32)(123)\r\n"
-             "1-0:3.8.0()(ABC)()\r\n"
-             "1-0:4.8.0\r\n"
-             "1-0:5.8.0(3.1415)\r\n"
-             "!0000\r\n"sv);
-  auto result = parser.parse_telegram(buffer.data(), buffer.size());
-  EXPECT_EQ(result.status, Status::Ok);
+  load_buffer_("/ISK5\r\n"
+               "1-0:1.8.0*255(123456.78)\r\n"
+               "1-0:2.8.0*255(987654.32)(123)\r\n"
+               "1-0:3.8.0()(ABC)()\r\n"
+               "1-0:4.8.0\r\n"
+               "1-0:5.8.0(3.1415)\r\n"
+               "!0000\r\n"sv);
+  auto result = parser_.parse_telegram(buffer_.data(), buffer_.size());
+  EXPECT_EQ(result.status, Status::OK);
 
   // Check the identifier string (without the /)
-  EXPECT_STREQ(buffer.data(), "ISK5");
+  EXPECT_STREQ(buffer_.data(), "ISK5");
 
   // Get number of objects
-  uint8_t *num_objects_ptr = reinterpret_cast<uint8_t *>(buffer.data() + strlen(buffer.data()) + 1);
+  uint8_t *num_objects_ptr = reinterpret_cast<uint8_t *>(buffer_.data() + strlen(buffer_.data()) + 1);
   EXPECT_EQ(*num_objects_ptr, 5);
 
   // First header + value
@@ -240,3 +235,6 @@ TEST_F(ParserTest, ParsedDataLayout) {
   char *value5_1 = current_pos + sizeof(Header);
   EXPECT_STREQ(value5_1, "3.1415");
 }
+
+}  // namespace
+}  // namespace esphome::efs

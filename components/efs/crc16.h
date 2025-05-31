@@ -31,7 +31,7 @@ class Crc16Calculator {
  public:
   void update(const char &ch) {
     const auto index = static_cast<uint8_t>(crc_ ^ ch);
-    crc_ = (crc_ >> 8) ^ table_[index];
+    crc_ = (crc_ >> 8) ^ TABLE[index];
   };
 
   uint16_t crc() { return crc_; };
@@ -39,9 +39,8 @@ class Crc16Calculator {
 
  protected:
   uint16_t crc_ = 0;
-  static constexpr auto table_ = util::init_table();
+  static constexpr auto TABLE = util::init_table();
 };
 
-constexpr std::array<uint16_t, 256> Crc16Calculator::table_;
 }  // namespace efs
 }  // namespace esphome

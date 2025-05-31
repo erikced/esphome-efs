@@ -260,36 +260,36 @@ bool Efs::parse_telegram() {
   const auto result = this->parser_.parse_telegram(this->telegram_, this->bytes_read_);
   const char *err_msg = nullptr;
   switch (result.status) {
-    case Status::Ok:
+    case Status::OK:
       break;
-    case Status::StartNotFound:
+    case Status::START_NOT_FOUND:
       err_msg = "Start of message not found.";
       break;
-    case Status::WriteOverflow:
+    case Status::WRITE_OVERFLOW:
       err_msg = "Write overflow occured when parsing telegram.";
       break;
-    case Status::InvalidObisCode:
+    case Status::INVALID_OBIS_CODE:
       err_msg = "Invalid ObisCode found.";
       break;
-    case Status::ParsingFailed:
+    case Status::PARSING_FAILED:
       err_msg = "Failed to parse telegram.";
       break;
-    case Status::InvalidCrc:
+    case Status::INVALID_CRC:
       err_msg = "Invalid telegram CRC checksum.";
       break;
-    case Status::CrcCheckFailed:
+    case Status::CRC_CHECK_FAILED:
       err_msg = "Telegram CRC checksum validation failed.";
       break;
-    case Status::ObjectTooLong:
+    case Status::OBJECT_TOO_LONG:
       err_msg = "Received an object whose parsed size exceeds the maximum allowed length (8kB).";
       break;
-    case Status::HeaderTooLong:
+    case Status::HEADER_TOO_LONG:
       err_msg = "Received a header that exceeds the maximum allowed length (255B).";
       break;
-    case Status::TooManyObjects:
+    case Status::TOO_MANY_OBJECTS:
       err_msg = "Received a telegram with more than the allowed number of entries (255).";
       break;
-    case Status::BufferNotAligned:
+    case Status::BUFFER_NOT_ALIGNED:
       err_msg = "The telegram buffer is not aligned to 2 bytes.";
       break;
   }

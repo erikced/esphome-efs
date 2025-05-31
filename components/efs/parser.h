@@ -17,49 +17,49 @@ const uint32_t MAX_NUM_OBJECTS = 255;
 
 template<typename CrcCalculator> class BaseParser {
  public:
-    reset_state(buffer, buffer_size);
   Result parse_telegram(char *buffer, size_t buffer_size) {
+    reset_state_(buffer, buffer_size);
     if (reinterpret_cast<uintptr_t>(buffer) % 2 != 0) {
-      return Result(Status::BufferNotAligned, nullptr, 0);
+      return Result(Status::BUFFER_NOT_ALIGNED, nullptr, 0);
     }
-    read_header();
-    if (status_ != Status::Ok) {
+    read_header_();
+    if (status_ != Status::OK) {
       return Result(status_, nullptr, 0);
     }
-    uint8_t *num_objects = write<uint8_t>(0);
+    uint8_t *num_objects = write_<uint8_t>(0);
     if ((write_pos_ - buffer) % 2 != 0) {
       // Add padding to align header to 2 bytes
-      write('\0');
+      write_('\0');
     }
-    while (status_ == Status::Ok) {
-      next_char();
+    while (status_ == Status::OK) {
+      next_char_();
       if (eod_) {
         break;
       } else if (std::isspace(ch_) != 0) {
         continue;
       } else if (ch_ == '!') {
         // CRC-16 checksum marker
-        uint16_t crc = read_crc();
+        uint16_t crc = read_crc_();
         if (crc != crc_calculator_.crc()) {
-          status_ = Status::CrcCheckFailed;
+          status_ = Status::CRC_CHECK_FAILED;
         }
       } else if (std::isdigit(ch_) != 0) {
         // OBIS code
         if (*num_objects == MAX_NUM_OBJECTS) {
-          status_ = Status::TooManyObjects;
+          status_ = Status::TOO_MANY_OBJECTS;
         } else {
-          read_object();
+          read_object_();
           ++(*num_objects);
         }
       } else {
-        status_ = Status::ParsingFailed;
+        status_ = Status::PARSING_FAILED;
       }
     }
     return Result(status_, buffer, write_pos_ - buffer);
   }
 
  protected:
-  const char &next_char(bool update_crc = true) {
+  const char &next_char_(bool update_crc = true) {
     eod_ |= read_pos_ == buffer_end_;
     if (!eod_) {
       ch_ = *read_pos_++;
@@ -73,9 +73,9 @@ template<typename CrcCalculator> class BaseParser {
     return ch_;
   }
 
-  template<typename T> T *write(const T &val) {
+  template<typename T> T *write_(const T &val) {
     if ((read_pos_ - write_pos_) < static_cast<ptrdiff_t>(sizeof(T))) {
-      status_ = Status::WriteOverflow;
+      status_ = Status::WRITE_OVERFLOW;
       return nullptr;
     }
     T *item_pos = reinterpret_cast<T *>(write_pos_);
@@ -84,47 +84,47 @@ template<typename CrcCalculator> class BaseParser {
     return item_pos;
   }
 
-  void reset_state(char *buffer, size_t buffer_size) {
+  void reset_state_(char *buffer, size_t buffer_size) {
     read_pos_ = write_pos_ = buffer;
     buffer_end_ = &buffer[buffer_size];
-    status_ = Status::Ok;
+    status_ = Status::OK;
     crc_calculator_.reset();
     eod_ = buffer_size == 0;
   }
 
-  void read_header() {
-    if (next_char() != '/') {
-      status_ = Status::StartNotFound;
+  void read_header_() {
+    if (next_char_() != '/') {
+      status_ = Status::START_NOT_FOUND;
       return;
     }
     const char *const start = write_pos_;
     do {
-      if (next_char() == eod_) {
-        status_ = Status::ParsingFailed;
+      if (next_char_() == eod_) {
+        status_ = Status::PARSING_FAILED;
       } else if (ch_ == '\r') {
-        if (next_char() != '\n') {
-          status_ = Status::ParsingFailed;
+        if (next_char_() != '\n') {
+          status_ = Status::PARSING_FAILED;
         }
-        write('\0');
+        write_('\0');
         if (write_pos_ - start > MAX_HEADER_SIZE) {
-          status_ = Status::HeaderTooLong;
+          status_ = Status::HEADER_TOO_LONG;
         }
         break;
       } else {
-        write(ch_);
+        write_(ch_);
       }
-    } while (status_ == Status::Ok);
+    } while (status_ == Status::OK);
   }
 
-  ObisCode read_obis_code() {
+  ObisCode read_obis_code_() {
     size_t part = 0;
     uint8_t cur = 0;
     ObisCode obis_code{0, 0, 0, 0, 0};
-    while (status_ == Status::Ok) {
+    while (status_ == Status::OK) {
       if (std::isdigit(ch_) != 0) {
         const uint8_t val = ch_ - '0';
         if (cur > 25 || (cur == 25 && val > 5)) {
-          status_ = Status::InvalidObisCode;
+          status_ = Status::INVALID_OBIS_CODE;
           break;
         }
         cur = cur * 10 + val;
@@ -139,53 +139,53 @@ template<typename CrcCalculator> class BaseParser {
         } else if (part != 5 || (part == 5 && cur != 255)) {
           // Reading 6-part obis codes is supported but the 6th part must be 255
           // since only 5 parts are stored.
-          status_ = Status::InvalidObisCode;
+          status_ = Status::INVALID_OBIS_CODE;
         }
         break;
       }
-      next_char();
+      next_char_();
     }
     return obis_code;
   }
 
-  void read_object() {
-    auto obis_code = read_obis_code();
-    if (status_ != Status::Ok) {
+  void read_object_() {
+    auto obis_code = read_obis_code_();
+    if (status_ != Status::OK) {
       return;
     }
-    auto *header = write<Header>(Header{obis_code, 0, 0});
-    while (status_ == Status::Ok) {
+    auto *header = write_<Header>(Header{obis_code, 0, 0});
+    while (status_ == Status::OK) {
       if (eod_) {
-        status_ = Status::ParsingFailed;
+        status_ = Status::PARSING_FAILED;
       } else if (ch_ == '(') {
         ++(header->num_values);
-        while (next_char() != ')' && !eod_) {
-          write(ch_);
+        while (next_char_() != ')' && !eod_) {
+          write_(ch_);
         }
-        write('\0');
+        write_('\0');
       } else if (ch_ == '\r') {
         ptrdiff_t object_size = write_pos_ - reinterpret_cast<const char *>(header);
-        if (next_char() != '\n') {
-          status_ = Status::ParsingFailed;
+        if (next_char_() != '\n') {
+          status_ = Status::PARSING_FAILED;
         } else if (object_size % 2 != 0) {
-          write('\0');
+          write_('\0');
           ++object_size;
         }
         if (object_size > MAX_OBJECT_SIZE) {
-          status_ = Status::ObjectTooLong;
+          status_ = Status::OBJECT_TOO_LONG;
         } else {
           header->object_size = static_cast<uint16_t>(object_size);
         }
         return;
       }
-      next_char();
+      next_char_();
     };
   }
 
-  uint16_t read_crc() {
+  uint16_t read_crc_() {
     uint16_t checksum = 0;
     for (uint32_t i = 0; i < 4; ++i) {
-      next_char(false);
+      next_char_(false);
       uint16_t value;
       if ('0' <= ch_ && ch_ <= '9') {
         value = ch_ - '0';
@@ -194,7 +194,7 @@ template<typename CrcCalculator> class BaseParser {
       } else if ('a' <= ch_ && ch_ <= 'f') {
         value = ch_ - 'a' + 10;
       } else {
-        status_ = Status::InvalidCrc;
+        status_ = Status::INVALID_CRC;
         return 0;
       }
       checksum = (checksum << 4) + value;
@@ -210,7 +210,7 @@ template<typename CrcCalculator> class BaseParser {
   char ch_ = '\0';
   bool eod_ = false;
   const char *buffer_end_ = nullptr;
-  Status status_ = Status::Ok;
+  Status status_ = Status::OK;
 };
 
 using Parser = BaseParser<Crc16Calculator>;

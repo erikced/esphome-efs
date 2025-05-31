@@ -7,14 +7,14 @@ namespace esphome {
 namespace efs {
 class ObisCode {
  public:
-  ObisCode(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e) : value{a, b, c, d, e} {};
-  uint8_t &operator[](size_t pos) { return value[pos]; }
-  const uint8_t &operator[](size_t pos) const { return value[pos]; }
-  friend bool operator==(const ObisCode &lhs, const ObisCode &rhs) { return lhs.value == rhs.value; }
-  friend bool operator<(const ObisCode &lhs, const ObisCode &rhs) { return lhs.value < rhs.value; }
+  ObisCode(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e) : value_{a, b, c, d, e} {};
+  uint8_t &operator[](size_t pos) { return value_[pos]; }
+  const uint8_t &operator[](size_t pos) const { return value_[pos]; }
+  friend bool operator==(const ObisCode &lhs, const ObisCode &rhs) { return lhs.value_ == rhs.value_; }
+  friend bool operator<(const ObisCode &lhs, const ObisCode &rhs) { return lhs.value_ < rhs.value_; }
 
  protected:
-  std::array<uint8_t, 5> value;
+  std::array<uint8_t, 5> value_;
 };
 
 const ObisCode ENERGY_IMPORTED(1, 0, 1, 8, 0);

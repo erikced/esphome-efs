@@ -1,7 +1,7 @@
 #pragma once
+#include <cstring>
+#include <iterator>
 #include <tuple>
-
-#include <string.h>
 
 namespace esphome {
 namespace efs {
@@ -22,7 +22,7 @@ class ValueIterator {
       buffer_ = nullptr;
       return;
     }
-    next();
+    next_();
   }
 
   reference operator*() const { return current_; }
@@ -45,7 +45,7 @@ class ValueIterator {
     buffer_size_ -= value_size;
 
     if (--remaining_values_ > 0) {
-      next();
+      next_();
     } else {
       buffer_ = nullptr;
     }
@@ -57,7 +57,7 @@ class ValueIterator {
   bool operator!=(const ValueIterator &other) const { return !(*this == other); }
 
  private:
-  void next() {
+  void next_() {
     size_t value_size = strnlen(buffer_, buffer_size_);
     if (value_size == buffer_size_) {
       buffer_ = nullptr;
