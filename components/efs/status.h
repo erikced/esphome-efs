@@ -1,6 +1,8 @@
 #pragma once
 
-enum Status {
+namespace esphome {
+namespace efs {
+enum class Status {
   OK,
   BUFFER_NOT_ALIGNED,
   START_NOT_FOUND,
@@ -13,3 +15,5 @@ enum Status {
   INVALID_CRC,
   CRC_CHECK_FAILED,
 };
+}  // namespace efs
+}  // namespace esphome
