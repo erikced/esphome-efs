@@ -164,7 +164,7 @@ template<typename CrcCalculator> class BaseParser {
         }
         write_('\0');
       } else if (ch_ == '\r') {
-        ptrdiff_t object_size = write_pos_ - reinterpret_cast<const char *>(header);
+        ptrdiff_t object_size = write_pos_ - reinterpret_cast<char *>(header);
         if (next_char_() != '\n') {
           status_ = Status::PARSING_FAILED;
         } else if (object_size % 2 != 0) {

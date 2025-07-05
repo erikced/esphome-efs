@@ -1,7 +1,6 @@
 #pragma once
 #include <string_view>
 
-#include "object.h"
 #include "obis_code.h"
 #include "value_iterator.h"
 
