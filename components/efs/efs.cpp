@@ -298,6 +298,26 @@ bool Efs::parse_telegram() {
     return false;
   }
 
+#ifdef EFS_PRINT_VALUES
+  for (const auto &object : result) {
+    if (object.num_values() == 0) {
+      ESP_LOGI(TAG, "%i-%i:%i.%i.%i", object.obis_code()[0], object.obis_code()[1], object.obis_code()[2],
+               object.obis_code()[3], object.obis_code()[4]);
+    } else if (object.num_values() == 1) {
+      const char *value = std::get<0>(*object.begin());
+      ESP_LOGI(TAG, "%i-%i:%i.%i.%i - %s", object.obis_code()[0], object.obis_code()[1], object.obis_code()[2],
+               object.obis_code()[3], object.obis_code()[4], value);
+    } else {
+      ESP_LOGI(TAG, "%i-%i:%i.%i.%i", object.obis_code()[0], object.obis_code()[1], object.obis_code()[2],
+               object.obis_code()[3], object.obis_code()[4]);
+      for (const auto &value_tuple : object) {
+        const char *value = std::get<0>(value_tuple);
+        ESP_LOGI(TAG, " - %s", value);
+      }
+    }
+  }
+#endif
+
   for (const auto &object : result) {
     const auto res = this->sensors_.find(object.obis_code());
     if (res == this->sensors_.end()) {

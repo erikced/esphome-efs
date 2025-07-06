@@ -5,8 +5,8 @@ through the P1 port. It supports Dutch Smart Meters (DSMR) and other European
 smart meters that use the DLMS/COSEM standard with OBIS codes. This component
 is a fork of the ESPHome [DSMR component](https://esphome.io/components/sensor/dsmr.html),
 retaining most of its functionality while introducing a more flexible parser.
-Consequently, settings under the `efs` key are identical to those for the `dsmr`
-component, but the `sensor` configuration is different.
+Consequently, settings under the `efs` key are mostly identical to those for
+the `dsmr` component, but the `sensor` configuration is different.
 
 ## Configuration
 
@@ -36,6 +36,7 @@ efs:
   request_pin: D5  # GPIO pin for request signal
   request_interval: 10s  # How often to request new data
   receive_timeout: 200ms  # Timeout for receiving telegram
+  print_values: false # Set to true to print all values in the telegram to the log
 ```
 
 ## Sensors
