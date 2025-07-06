@@ -5,19 +5,15 @@
 #include "components/efs/obis_code.h"
 #include "components/efs/result.h"
 #include "components/efs/status.h"
+#include "matchers.h"
 
 using ::testing::AllOf;
 using ::testing::ElementsAre;
-using ::testing::FieldsAre;
 using ::testing::Property;
-using ::testing::StrEq;
+using esphome::efs::testing::ValueEq;
 
 namespace esphome::efs {
 namespace {
-
-MATCHER_P(ValueEq, value, "") {
-  return ExplainMatchResult(FieldsAre(StrEq(value), strlen(value)), arg, result_listener);
-}
 
 class ResultTest : public ::testing::Test {
  protected:
