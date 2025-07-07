@@ -27,17 +27,16 @@ efs:
   max_telegram_length: 1700  # Should match or be smaller than uart rx_buffer_size
 ```
 
-### Advanced Configuration
+### Configuration Options
 
-```yaml
-efs:
-  max_telegram_length: 1700
-  decryption_key: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # For encrypted meters
-  request_pin: D5  # GPIO pin for request signal
-  request_interval: 10s  # How often to request new data
-  receive_timeout: 200ms  # Timeout for receiving telegram
-  print_values: false # Set to true to print all values in the telegram to the log
-```
+| Option | Default Value | Description |
+|-------------|-----------|-------------|
+| max_telegram_length | `1500` | Max size of the meter's telegram |
+| decryption_key | | Decryption key for encrypted meters, 16 hex bytes, e.g. `0123456789ABCDEF0123456789ABCDEF` |
+| request_pin | | GPIO pin for request signal |
+| request_interval | 0ms | How often to request new data | 
+| receive_timeout | 200ms | Timeout for receiving telegram |
+| print_values | `false` | Control logging of all telegram OBIS codes and values |
 
 ## Sensors
 
